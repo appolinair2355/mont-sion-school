@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scolarité - {{ school_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Gestion de la Scolarité - {{ school_name }}</h1>
+        <button onclick="window.location.href='/'">Retour à l'accueil</button>
+    </header>
+
+    <main>
+        <div class="form-section">
+            <h2>Recherche et Paiement des Frais</h2>
+            
+            <input type="text" id="searchInput" class="search-bar" 
+                   placeholder="Rechercher par nom ou prénom...">
+            
+            <div id="searchResults"></div>
+            
+            <div id="paymentForm" style="display: none;">
+                <h3>Paiement des frais</h3>
+                <form id="paymentFormElement">
+                    <div class="form-group">
+                        <label for="paymentAmount">Montant à payer (FCFA):</label>
+                        <input type="number" id="paymentAmount" min="0" required>
+                    </div>
+                    <button type="submit">Enregistrer le paiement</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentStudentId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+            const paymentForm = document.getElementById('paymentForm');
+            const paymentFormElement = document.getElementById('paymentFormElement');
+
+            // Vérifier l'accès
+            checkAccess();
+
+            searchInput.addEventListener('input', async function() {
+                const query = this.value.trim();
+                if (query.length >= 2) {
+                    const results = await searchStudents(query);
+                    displayResults(results);
+                } else {
+                    loadAllStudents();
+                }
+            });
+
+            async function checkAccess() {
+                try {
+                    const response = await fetch('/api/students');
+                    if (response.status === 401) {
+                        alert('Accès non autorisé');
+                        window.location.href = '/';
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                }
+            }
+
+            async function searchStudents(query) {
+                try {
+                    const response = await fetch(`/api/search-students?q=${encodeURIComponent(query)}`);
+                    return await response.json();
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            async function loadAllStudents() {
+                try {
+                    const response = await fetch('/api/students');
+                    const students = await response.json();
+                    displayResults(students);
+                } catch (error) {
+                    console.error('Erreur:', error);
+                }
+            }
+
+            function displayResults(students) {
+                if (students.length === 0) {
+                    searchResults.innerHTML = '<p>Aucun élève trouvé</p>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Prénoms</th>
+                                <th>Classe</th>
+                                <th>Frais total</th>
+                                <th>Montant payé</th>
+                                <th>Reste à payer</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                students.forEach(student => {
+                    const reste = 70000 - (student.montant_paye || 0);
+                    html += `
+                        <tr>
+                            <td>${student.nom}</td>
+                            <td>${student.prenoms}</td>
+                            <td>${student.classe?.replace('_', ' ')}</td>
+                            <td>70,000 FCFA</td>
+                            <td>${(student.montant_paye || 0).toLocaleString()} FCFA</td>
+                            <td>${reste.toLocaleString()} FCFA</td>
+                            <td>
+                                <button onclick="selectStudent(${student.id}, ${reste})">Payer</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                searchResults.innerHTML = html;
+            }
+
+            window.selectStudent = function(studentId, reste) {
+                currentStudentId = studentId;
+                paymentForm.style.display = 'block';
+                document.getElementById('paymentAmount').max = reste;
+            };
+
+            paymentFormElement.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const amount = parseInt(document.getElementById('paymentAmount').value);
+                if (amount > 0) {
+                    try {
+                        const response = await fetch(`/api/students/${currentStudentId}/payment`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ amount })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            alert(`Paiement enregistré! Nouveau montant payé: ${result.student.montant_paye.toLocaleString()} FCFA`);
+                            
+                            // Rafraîchir l'affichage
+                            const query = searchInput.value.trim();
+                            if (query) {
+                                const results = await searchStudents(query);
+                                displayResults(results);
+                            } else {
+                                loadAllStudents();
+                            }
+                            
+                            paymentForm.style.display = 'none';
+                            paymentFormElement.reset();
+                        }
+                    } catch (error) {
+                        alert('Erreur lors de l\'enregistrement du paiement');
+                    }
+                }
+            });
+
+            // Charger tous les élèves au démarrage
+            loadAllStudents();
+        });
+    </script>
+</body>
+          </html>
+                      
