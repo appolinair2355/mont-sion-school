@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ school_name }} - Gestion Scolaire</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>{{ school_name }}</h1>
+        <p>Système de Gestion Scolaire - Maternelle au 3ème</p>
+    </header>
+
+    <main>
+        <div class="welcome-section">
+            <h2>Bienvenue à l'École {{ school_name }}</h2>
+            <div class="button-container">
+                <button class="main-btn" onclick="navigateTo('inscription')">
+                    <span class="icon">📝</span>
+                    <span>Inscription</span>
+                </button>
+                
+                <button class="main-btn" onclick="checkAccess('scolarite')">
+                    <span class="icon">💰</span>
+                    <span>Scolarité</span>
+                </button>
+                
+                <button class="main-btn" onclick="checkAccess('administration')">
+                    <span class="icon">⚙️</span>
+                    <span>Administration</span>
+                </button>
+                
+                <button class="main-btn" onclick="navigateTo('profil')">
+                    <span class="icon">👤</span>
+                    <span>Profil</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de connexion -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Connexion requise - {{ school_name }}</h2>
+            <form id="loginForm">
+                <label for="username">Nom d'utilisateur:</label>
+                <input type="text" id="username" required>
+                
+                <label for="password">Mot de passe:</label>
+                <input type="password" id="password" required>
+                
+                <button type="submit">Se connecter</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function navigateTo(page) {
+            window.location.href = '/' + page;
+        }
+
+        async function checkAccess(section) {
+            const modal = document.getElementById('loginModal');
+            modal.style.display = 'block';
+            modal.dataset.section = section;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('loginModal');
+            const span = document.getElementsByClassName('close')[0];
+            const loginForm = document.getElementById('loginForm');
+
+            if (span) {
+                span.onclick = function() {
+                    modal.style.display = 'none';
+                }
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    
+                    try {
+                        const response = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, password })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            const section = modal.dataset.section;
+                            modal.style.display = 'none';
+                            navigateTo(section);
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch (error) {
+                        alert('Erreur de connexion au serveur');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+  </html>
+  
