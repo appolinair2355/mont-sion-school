@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - {{ school_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Administration - Vue d'ensemble - {{ school_name }}</h1>
+        <button onclick="window.location.href='/'">Retour à l'accueil</button>
+    </header>
+
+    <main>
+        <div class="form-section">
+            <h2>Tous les élèves inscrits</h2>
+            
+            <input type="text" id="adminSearch" class="search-bar" 
+                   placeholder="Rechercher un élève...">
+            
+            <div id="adminResults"></div>
+            
+            <div id="stats">
+                <h3>Statistiques</h3>
+                <p>Total élèves: <span id="totalStudents">0</span></p>
+                <p>Total frais attendus: <span id="totalExpected">0</span> FCFA</p>
+                <p>Total perçu: <span id="totalCollected">0</span> FCFA</p>
+                <p>Total reste à payer: <span id="totalRemaining">0</span> FCFA</p>
+            </div>
+            
+            <button onclick="downloadYAML()" style="margin-top: 20px;">
+                Télécharger les données (YAML)
+            </button>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Vérifier l'accès - seulement Kouamé
+            const adminSearch = document.getElementById('adminSearch');
+            const adminResults = document.getElementById('adminResults');
+
+            loadAllStudents();
+            loadStats();
+            
+            adminSearch.addEventListener('input', async function() {
+                const query = this.value.trim();
+                if (query) {
+                    const results = await searchStudents(query);
+                    displayAdminResults(results);
+                } else {
+                    loadAllStudents();
+                }
+            });
+
+            async function checkAdminAccess() {
+                try {
+                    const response = await fetch('/api/stats');
+                    if (response.status === 401) {
+                        alert('Accès non autorisé - Seulement Kouamé peut accéder à cette page');
+                        window.location.href = '/';
+                        return false;
+                    }
+                    return true;
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            async function searchStudents(query) {
+                try {
+                    const response = await fetch(`/api/search-students?q=${encodeURIComponent(query)}`);
+                    return await response.json();
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            async function loadAllStudents() {
+                try {
+                    const response = await fetch('/api/students');
+                    const students = await response.json();
+                    displayAdminResults(students);
+                } catch (error) {
+                    console.error('Erreur:', error);
+                }
+            }
+
+            async function loadStats() {
+                try {
+                    const response = await fetch('/api/stats');
+                    const stats = await response.json();
+                    
+                    document.getElementById('totalStudents').textContent = stats.total_students;
+                    document.getElementById('totalExpected').textContent = stats.total_expected.toLocaleString();
+                    document.getElementById('totalCollected').textContent = stats.total_collected.toLocaleString();
+                    document.getElementById('totalRemaining').textContent = stats.total_remaining.toLocaleString();
+                } catch (error) {
+                    console.error('Erreur:', error);
+                }
+            }
+
+            function displayAdminResults(students) {
+                if (students.length === 0) {
+                    adminResults.innerHTML = '<p>Aucun élève inscrit</p>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Prénoms</th>
+                                <th>Niveau</th>
+                                <th>Classe</th>
+                                <th>Tuteur</th>
+                                <th>Téléphone</th>
+                                <th>Frais total</th>
+                                <th>Montant payé</th>
+                                <th>Reste à payer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                students.forEach(student => {
+                    const reste = 70000 - (student.montant_paye || 0);
+                    html += `
+                        <tr>
+                            <td>${student.id}</td>
+                            <td>${student.nom}</td>
+                            <td>${student.prenoms}</td>
+                            <td>${student.niveau}</td>
+                            <td>${student.classe?.replace('_', ' ')}</td>
+                            <td>${student.tuteur}</td>
+                            <td>${student.telephone}</td>
+                            <td>70,000 FCFA</td>
+                            <td>${(student.montant_paye || 0).toLocaleString()} FCFA</td>
+                            <td>${reste.toLocaleString()} FCFA</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                adminResults.innerHTML = html;
+            }
+
+            window.downloadYAML = function() {
+                window.location.href = '/api/download-yaml';
+            };
+
+            if (await checkAdminAccess()) {
+                loadAllStudents();
+                loadStats();
+            }
+        });
+    </script>
+</body>
+  </html>
+              
