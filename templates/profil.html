@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer un Profil - {{ school_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Créer un Profil - {{ school_name }}</h1>
+        <button onclick="window.location.href='/'">Retour à l'accueil</button>
+    </header>
+
+    <main>
+        <div class="form-section">
+            <h2>Création de profil utilisateur</h2>
+            <form id="createProfileForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="username">Nom d'utilisateur:</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role">Fonction:</label>
+                        <select id="role" required>
+                            <option value="">Sélectionner une fonction</option>
+                            <option value="professeur">Professeur</option>
+                            <option value="directrice">Directrice</option>
+                            <option value="maitre">Maître</option>
+                            <option value="maitresse">Maîtresse</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Mot de passe:</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirmer le mot de passe:</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                </div>
+                
+                <button type="submit">Créer le profil</button>
+            </form>
+            
+            <div id="message"></div>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('createProfileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const role = document.getElementById('role').value;
+            
+            if (password !== confirmPassword) {
+                document.getElementById('message').innerHTML = 
+                    '<p class="error-message">Les mots de passe ne correspondent pas</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/create-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('message').innerHTML = 
+                        '<p class="success-message">' + result.message + '</p>';
+                    document.getElementById('createProfileForm').reset();
+                    
+                    setTimeout(() => {
+                        alert("Vous êtes maintenant autorisé à inscrire les élèves et écoliers");
+                    }, 1000);
+                } else {
+                    document.getElementById('message').innerHTML = 
+                        '<p class="error-message">' + result.message + '</p>';
+                }
+            } catch (error) {
+                document.getElementById('message').innerHTML = 
+                    '<p class="error-message">Erreur de connexion au serveur</p>';
+            }
+        });
+    </script>
+</body>
+  </html>
+  
