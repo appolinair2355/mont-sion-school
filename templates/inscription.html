@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - {{ school_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Inscription des Élèves - {{ school_name }}</h1>
+        <button onclick="window.location.href='/'">Retour à l'accueil</button>
+    </header>
+
+    <main>
+        <div class="form-section">
+            <h2>Formulaire d'inscription</h2>
+            <form id="inscriptionForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nom">Nom:</label>
+                        <input type="text" id="nom" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="prenoms">Prénoms:</label>
+                        <input type="text" id="prenoms" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="dateNaissance">Date de naissance:</label>
+                        <input type="date" id="dateNaissance" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lieuNaissance">Lieu de naissance:</label>
+                        <input type="text" id="lieuNaissance" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="niveau">Niveau:</label>
+                        <select id="niveau" required onchange="updateClasses()">
+                            <option value="">Sélectionner le niveau</option>
+                            <option value="primaire">Primaire</option>
+                            <option value="secondaire">Secondaire</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="classe">Classe:</label>
+                        <select id="classe" required>
+                            <option value="">Sélectionner d'abord le niveau</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tuteur">Tuteur/Parents:</label>
+                        <input type="text" id="tuteur" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="telephone">Numéro de téléphone:</label>
+                        <input type="tel" id="telephone" required>
+                    </div>
+                </div>
+                
+                <button type="submit">Inscrire l'élève</button>
+            </form>
+            
+            <div id="message"></div>
+        </div>
+    </main>
+
+    <script>
+        const classesPrimaire = [
+            'Maternelle - Petite section',
+            'Maternelle - Moyenne section', 
+            'Maternelle - Grande section',
+            'CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'
+        ];
+        
+        const classesSecondaire = [
+            '6ème', '5ème', '4ème', '3ème'
+        ];
+        
+        function updateClasses() {
+            const niveau = document.getElementById('niveau').value;
+            const classeSelect = document.getElementById('classe');
+            
+            classeSelect.innerHTML = '<option value="">Sélectionner la classe</option>';
+            
+            let classes = [];
+            if (niveau === 'primaire') {
+                classes = classesPrimaire;
+            } else if (niveau === 'secondaire') {
+                classes = classesSecondaire;
+            }
+            
+            classes.forEach(classe => {
+                const option = document.createElement('option');
+                option.value = classe.toLowerCase().replace(/[\s-]/g, '_');
+                option.textContent = classe;
+                classeSelect.appendChild(option);
+            });
+        }
+        
+        document.getElementById('inscriptionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const studentData = {
+                nom: document.getElementById('nom').value,
+                prenoms: document.getElementById('prenoms').value,
+                dateNaissance: document.getElementById('dateNaissance').value,
+                lieuNaissance: document.getElementById('lieuNaissance').value,
+                niveau: document.getElementById('niveau').value,
+                classe: document.getElementById('classe').value,
+                tuteur: document.getElementById('tuteur').value,
+                telephone: document.getElementById('telephone').value
+            };
+            
+            try {
+                const response = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(studentData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('message').innerHTML = 
+                        `<p class="success-message">Élève inscrit avec succès! ID: ${result.student.id}</p>`;
+                    document.getElementById('inscriptionForm').reset();
+                } else {
+                    document.getElementById('message').innerHTML = 
+                        `<p class="error-message">${result.message}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('message').innerHTML = 
+                    '<p class="error-message">Erreur de connexion au serveur</p>';
+            }
+        });
+    </script>
+</body>
+                                               </html>
+  
